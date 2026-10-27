@@ -1,0 +1,28 @@
+name: .NET build
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Install .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Build CatalogService
+        run: dotnet build src/CatalogService/CatalogService.csproj --configuration Release
+      - name: Build OrdersService
+        run: dotnet build src/OrdersService/OrdersService.csproj --configuration Release
+      - name: Build ExamGateway
+        run: dotnet build src/ExamGateway/ExamGateway.csproj --configuration Release
+      - name: Build RegistrationService
+        run: dotnet build src/RegistrationService/RegistrationService.csproj --configuration Release
+      - name: Build NotificationWorker
+        run: dotnet build src/NotificationWorker/NotificationWorker.csproj --configuration Release
