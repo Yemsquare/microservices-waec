@@ -27,7 +27,7 @@ The first SQL Server image startup may take a minute. RegistrationService retrie
 - Gateway health: http://localhost:8080/health
 - Subject catalogue: http://localhost:8080/api/catalog/subjects
 - Registrations: http://localhost:8080/api/registrations
-- RabbitMQ management: http://localhost:15672 (training default: guest / guest)
+- RabbitMQ management: http://localhost:15672 (training-only login: waec / training-local-only)
 
 ## Create an examination registration
 ```bash
