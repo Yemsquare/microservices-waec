@@ -21,7 +21,7 @@ using (var scope = app.Services.CreateScope())
     while (true)
     {
         try { db.Database.EnsureCreated(); break; }
-        catch when (++attempts < 10) { await Task.Delay(TimeSpan.FromSeconds(3)); }
+        catch when (++attempts < 40) { await Task.Delay(TimeSpan.FromSeconds(3)); }
     }
 }
 
