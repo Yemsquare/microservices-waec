@@ -64,11 +64,12 @@ services:
       dockerfile: src/NotificationWorker/Dockerfile
     environment:
       RabbitMq__Host: rabbitmq
-      RabbitMq__User: guest
-      RabbitMq__Password: guest
+      RabbitMq__User: waec
+      RabbitMq__Password: training-local-only
     depends_on:
       rabbitmq:
         condition: service_healthy
+    restart: unless-stopped
   gateway:
     build:
       context: .
