@@ -1,4 +1,4 @@
-name: .NET build
+name: .NET build and integration tests
 
 on:
   push:
@@ -7,22 +7,98 @@ on:
     branches: [ master, main ]
 
 jobs:
-  build:
+  build-and-integration-test:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+
       - name: Install .NET 8 SDK
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
+
       - name: Build CatalogService
         run: dotnet build src/CatalogService/CatalogService.csproj --configuration Release
+
       - name: Build OrdersService
         run: dotnet build src/OrdersService/OrdersService.csproj --configuration Release
+
       - name: Build ExamGateway
         run: dotnet build src/ExamGateway/ExamGateway.csproj --configuration Release
+
       - name: Build RegistrationService
         run: dotnet build src/RegistrationService/RegistrationService.csproj --configuration Release
+
       - name: Build NotificationWorker
         run: dotnet build src/NotificationWorker/NotificationWorker.csproj --configuration Release
+
+      - name: Start the Docker Compose environment
+        run: docker compose up -d --build
+
+      - name: Wait for service readiness
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoints=(
+            "http://localhost:8080/health"
+            "http://localhost:8081/health"
+            "http://localhost:8082/health"
+            "http://localhost:8083/health"
+          )
+
+          for endpoint in "${endpoints[@]}"; do
+            ready=false
+            for attempt in {1..90}; do
+              if curl --fail --silent "$endpoint" >/dev/null; then
+                ready=true
+                echo "Ready: $endpoint"
+                break
+              fi
+              sleep 2
+            done
+
+            if [ "$ready" != true ]; then
+              echo "Timed out waiting for $endpoint"
+              docker compose ps
+              exit 1
+            fi
+          done
+
+          rabbit_ready=false
+          for attempt in {1..60}; do
+            if curl --fail --silent --user "waec:training-local-only" \
+              http://localhost:15672/api/overview >/dev/null; then
+              rabbit_ready=true
+              echo "Ready: RabbitMQ management API"
+              break
+            fi
+            sleep 2
+          done
+
+          if [ "$rabbit_ready" != true ]; then
+            echo "Timed out waiting for RabbitMQ management API"
+            docker compose ps
+            exit 1
+          fi
+
+      - name: Run automated integration tests
+        run: dotnet test tests/Waec.IntegrationTests/Waec.IntegrationTests.csproj --configuration Release --logger "trx;LogFileName=integration-tests.trx"
+
+      - name: Capture service logs
+        if: always()
+        run: docker compose logs --no-color > docker-compose-logs.txt
+
+      - name: Upload test results and service logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: waec-integration-test-results
+          path: |
+            **/TestResults/*.trx
+            docker-compose-logs.txt
+          if-no-files-found: warn
+
+      - name: Stop Docker Compose environment
+        if: always()
+        run: docker compose down -v
