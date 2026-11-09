@@ -1,0 +1,13 @@
+# Keep host-generated build outputs out of Docker build contexts.
+# Otherwise COPY can overwrite the container's restored obj/project.assets.json.
+**/bin/
+**/obj/
+
+# Local tooling and repository metadata
+.git/
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+.env
