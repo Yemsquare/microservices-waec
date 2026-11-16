@@ -37,10 +37,6 @@ jobs:
         run: dotnet build src/NotificationWorker/NotificationWorker.csproj --configuration Release
 
       - name: Start the Docker Compose environment
-        env:
-          JWT_KEY: ci-only-test-signing-key-should-never-be-used-in-production
-          ADMIN_EMAIL: admin@waec-ci.local
-          ADMIN_PASSWORD: CI-Only-Admin-Password-2026!
         run: docker compose up -d --build
 
       - name: Wait for service readiness
