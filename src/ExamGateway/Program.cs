@@ -24,9 +24,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
 });
 builder.Services.AddAuthorization(options =>
 {
+    // Permission policies are more flexible than role checks: a role is just a bundle of claims.
+    options.AddPolicy("CatalogRead", policy => policy.RequireClaim("permission", "catalog.read"));
+    options.AddPolicy("CatalogManage", policy => policy.RequireClaim("permission", "catalog.manage"));
+    options.AddPolicy("RegistrationsRead", policy => policy.RequireClaim("permission", "registrations.read"));
+    options.AddPolicy("RegistrationsCreate", policy => policy.RequireClaim("permission", "registrations.create"));
     options.AddPolicy("Authenticated", policy => policy.RequireAuthenticatedUser());
-    options.AddPolicy("ExaminerOrAdmin", policy => policy.RequireRole("Examiner", "Administrator"));
-    options.AddPolicy("AnyExamRole", policy => policy.RequireRole("Candidate", "Examiner", "Administrator"));
 });
 builder.Services.AddReverseProxy().LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
 
