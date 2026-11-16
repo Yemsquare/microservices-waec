@@ -32,7 +32,8 @@ services:
       Jwt__Issuer: Waec.Auth
       Jwt__Audience: Waec.Api
       Jwt__Key: ${JWT_KEY:-local-only-change-this-development-key-before-deployment-2026}
-      Jwt__AccessTokenMinutes: ${JWT_ACCESS_TOKEN_MINUTES:-60}
+      Jwt__AccessTokenMinutes: ${JWT_ACCESS_TOKEN_MINUTES:-10}
+      Jwt__RefreshTokenDays: ${JWT_REFRESH_TOKEN_DAYS:-7}
       BootstrapAdmin__Email: ${ADMIN_EMAIL:-admin@waec-training.local}
       BootstrapAdmin__Password: ${ADMIN_PASSWORD:-ChangeThis-Admin-Password-2026!}
     ports:
