@@ -85,3 +85,19 @@ Login as the bootstrap Administrator, then use its token to call `POST /api/auth
 
 ## Practical assignment
 Add a `Chief Examiner` policy, protect one new route, write tests for anonymous, Candidate, Examiner, and Administrator callers, and demonstrate 401 and 403 outcomes.
+
+
+## Extension: permission claims and session lifecycle
+
+The advanced implementation now includes:
+- 10-minute JWT access tokens and 7-day opaque refresh tokens.
+- Refresh-token rotation at `POST /api/auth/refresh`.
+- Logout/revocation at `POST /api/auth/logout`.
+- Permission claims grouped by role: `catalog.read`, `catalog.manage`, `registrations.read`, `registrations.create`, `profile.read`, and `users.manage`.
+- Administrator user listing, role changes, and account enable/disable.
+
+Continue with [Day 9 — Refresh Tokens, Permissions, and User Administration](day-9-refresh-tokens-permissions-and-user-management.md) for the full practical lab.
+
+## Code-commenting standard
+
+The source code deliberately includes comments explaining why each security step exists, not merely repeating what the next line does. Ask learners to explain the threat each comment addresses: privilege escalation, token theft, refresh replay, or stale authorization.
