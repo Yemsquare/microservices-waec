@@ -150,7 +150,9 @@ app.MapPost("/api/auth/refresh", async (RefreshRequest request, AuthDbContext db
     var stored = await db.RefreshTokens.Include(x => x.User)
         .SingleOrDefaultAsync(x => x.TokenHash == tokenHash);
 
-    if (stored is null || stored.RevokedAtUtc is not null || stored.ExpiresAtUtc <= DateTime.UtcNow)
+    if (stored is null || stored.RevokedAtUtc is not null || stored.ExpiresAtUtc <= DateTime.UtcNow
+        || (stored.User.LockoutEnabled && stored.User.LockoutEnd is not null
+            && stored.User.LockoutEnd > DateTimeOffset.UtcNow))
         return Results.Unauthorized();
 
     // Rotate atomically: revoke the old token before issuing a replacement.
@@ -331,6 +333,8 @@ public sealed class AuthDbContext(DbContextOptions<AuthDbContext> options) : Ide
     {
         base.OnModelCreating(builder);
         builder.Entity<RefreshToken>().HasIndex(x => x.TokenHash).IsUnique();
+        // SQL Server rowversion detects two refresh requests trying to rotate the same token concurrently.
+        builder.Entity<RefreshToken>().Property(x => x.RowVersion).IsRowVersion();
         builder.Entity<RefreshToken>().HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId);
     }
 }
@@ -345,4 +349,5 @@ public sealed class RefreshToken
     public DateTime ExpiresAtUtc { get; set; }
     public DateTime? RevokedAtUtc { get; set; }
     public string? ReplacedByTokenHash { get; set; }
+    public byte[] RowVersion { get; set; } = [];
 }
