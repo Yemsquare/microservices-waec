@@ -29,7 +29,7 @@ builder.Services.AddIdentityCore<IdentityUser>(options =>
 .AddEntityFrameworkStores<AuthDbContext>()
 .AddSignInManager();
 
-builder.Services.AddAuthentication()
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
