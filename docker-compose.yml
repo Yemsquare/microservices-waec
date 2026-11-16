@@ -1,4 +1,4 @@
-# All services share a private network and resolve each other by service name.
+# Services communicate over the private Compose network. The gateway is the intended public API entry point.
 services:
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
@@ -22,6 +22,25 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+  auth:
+    build:
+      context: .
+      dockerfile: src/AuthService/Dockerfile
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__Auth: "Server=sqlserver,1433;Database=WaecAuth;User Id=sa;Password=TrainingOnly_StrongPassword_2026!;TrustServerCertificate=True"
+      Jwt__Issuer: Waec.Auth
+      Jwt__Audience: Waec.Api
+      Jwt__Key: ${JWT_KEY:-local-only-change-this-development-key-before-deployment-2026}
+      Jwt__AccessTokenMinutes: ${JWT_ACCESS_TOKEN_MINUTES:-60}
+      BootstrapAdmin__Email: ${ADMIN_EMAIL:-admin@waec-training.local}
+      BootstrapAdmin__Password: ${ADMIN_PASSWORD:-ChangeThis-Admin-Password-2026!}
+    ports:
+      - "8084:8080"
+    depends_on:
+      sqlserver:
+        condition: service_started
+    restart: unless-stopped
   catalog:
     build:
       context: .
@@ -76,12 +95,17 @@ services:
       dockerfile: src/ExamGateway/Dockerfile
     environment:
       ASPNETCORE_URLS: http://+:8080
+      Jwt__Issuer: Waec.Auth
+      Jwt__Audience: Waec.Api
+      Jwt__Key: ${JWT_KEY:-local-only-change-this-development-key-before-deployment-2026}
+      ReverseProxy__Clusters__auth__Destinations__destination1__Address: http://auth:8080/
       ReverseProxy__Clusters__catalog__Destinations__destination1__Address: http://catalog:8080/
       ReverseProxy__Clusters__orders__Destinations__destination1__Address: http://orders:8080/
       ReverseProxy__Clusters__registration__Destinations__destination1__Address: http://registration:8080/
     ports:
       - "8080:8080"
     depends_on:
+      - auth
       - catalog
       - orders
       - registration
