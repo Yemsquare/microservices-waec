@@ -131,19 +131,21 @@ app.MapPost("/api/auth/register", async (RegisterRequest request, UserManager<Id
 
 // Login checks both password and account lockout, then issues a short-lived access token and a rotating refresh token.
 app.MapPost("/api/auth/login", async (LoginRequest request, UserManager<IdentityUser> users,
-    SignInManager<IdentityUser> signIn, AuthDbContext db) =>
+    SignInManager<IdentityUser> signIn, AuthDbContext db, RoleManager<IdentityRole> roleManager) =>
 {
     var user = await users.FindByEmailAsync(request.Email.Trim());
     if (user is null || !(await signIn.CheckPasswordSignInAsync(user, request.Password, lockoutOnFailure: true)).Succeeded)
         return Results.Unauthorized();
 
-    return Results.Ok(await IssueTokenPairAsync(user, users, db, jwt, signingKey));
+    return Results.Ok(await IssueTokenPairAsync(user, users, roleManager, db, jwt, signingKey));
 });
 
 // Refresh tokens are opaque random values. Only their SHA-256 hashes are persisted in the database.
 app.MapPost("/api/auth/refresh", async (RefreshRequest request, AuthDbContext db,
-    UserManager<IdentityUser> users) =>
+    UserManager<IdentityUser> users, RoleManager<IdentityRole> roleManager) =>
 {
+    // Keep lookup, revocation, and replacement inside one database transaction to prevent parallel token reuse.
+    await using var transaction = await db.Database.BeginTransactionAsync();
     var tokenHash = HashToken(request.RefreshToken);
     var stored = await db.RefreshTokens.Include(x => x.User)
         .SingleOrDefaultAsync(x => x.TokenHash == tokenHash);
@@ -153,9 +155,10 @@ app.MapPost("/api/auth/refresh", async (RefreshRequest request, AuthDbContext db
 
     // Rotate atomically: revoke the old token before issuing a replacement.
     stored.RevokedAtUtc = DateTime.UtcNow;
-    var pair = await IssueTokenPairAsync(stored.User, users, db, jwt, signingKey);
+    var pair = await IssueTokenPairAsync(stored.User, users, roleManager, db, jwt, signingKey);
     stored.ReplacedByTokenHash = HashToken(pair.RefreshToken);
     await db.SaveChangesAsync();
+    await transaction.CommitAsync();
     return Results.Ok(pair);
 }).AddEndpointFilter(async (context, next) =>
 {
@@ -263,7 +266,7 @@ app.Run();
 
 // Shared token-pair builder keeps login and refresh responses consistent and adds current role permission claims.
 static async Task<TokenPairResponse> IssueTokenPairAsync(IdentityUser user, UserManager<IdentityUser> users,
-    AuthDbContext db, IConfiguration jwt, string signingKey)
+    RoleManager<IdentityRole> roleManager, AuthDbContext db, IConfiguration jwt, string signingKey)
 {
     var roles = await users.GetRolesAsync(user);
     var claims = new List<Claim>
@@ -275,7 +278,6 @@ static async Task<TokenPairResponse> IssueTokenPairAsync(IdentityUser user, User
     };
 
     claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
-    var roleManager = db.GetService<RoleManager<IdentityRole>>();
     foreach (var roleName in roles)
     {
         var role = await roleManager.FindByNameAsync(roleName);
