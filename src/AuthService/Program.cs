@@ -145,8 +145,10 @@ app.MapPost("/api/auth/login", async (LoginRequest request, UserManager<Identity
 app.MapPost("/api/auth/refresh", async (RefreshRequest request, AuthDbContext db,
     UserManager<IdentityUser> users, RoleManager<IdentityRole> roleManager) =>
 {
-    // Keep lookup, revocation, and replacement inside one database transaction to prevent parallel token reuse.
-    await using var transaction = await db.Database.BeginTransactionAsync();
+    try
+    {
+        // Keep lookup, revocation, and replacement inside one database transaction to prevent parallel token reuse.
+        await using var transaction = await db.Database.BeginTransactionAsync();
     var tokenHash = HashToken(request.RefreshToken);
     var stored = await db.RefreshTokens.Include(x => x.User)
         .SingleOrDefaultAsync(x => x.TokenHash == tokenHash);
@@ -161,8 +163,14 @@ app.MapPost("/api/auth/refresh", async (RefreshRequest request, AuthDbContext db
     var pair = await IssueTokenPairAsync(stored.User, users, roleManager, db, jwt, signingKey);
     stored.ReplacedByTokenHash = HashToken(pair.RefreshToken);
     await db.SaveChangesAsync();
-    await transaction.CommitAsync();
-    return Results.Ok(pair);
+        await transaction.CommitAsync();
+        return Results.Ok(pair);
+    }
+    catch (DbUpdateConcurrencyException)
+    {
+        // Another request already rotated this token; treat the replay as an invalid session.
+        return Results.Unauthorized();
+    }
 }).AddEndpointFilter(async (context, next) =>
 {
     // The request DTO is checked here to reject empty refresh-token strings consistently.
