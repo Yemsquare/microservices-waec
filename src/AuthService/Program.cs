@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -177,7 +178,9 @@ app.MapPost("/api/auth/logout", async (RefreshRequest request, AuthDbContext db)
     if (string.IsNullOrWhiteSpace(request.RefreshToken))
         return Results.BadRequest(new { message = "Refresh token is required." });
 
-    var stored = await db.RefreshTokens.SingleOrDefaultAsync(x => x.TokenHash == HashToken(request.RefreshToken));
+    // Calculate the hash before the EF query; local functions cannot be translated inside expression trees.
+    var tokenHash = HashToken(request.RefreshToken);
+    var stored = await db.RefreshTokens.SingleOrDefaultAsync(x => x.TokenHash == tokenHash);
     if (stored is not null && stored.RevokedAtUtc is null)
     {
         stored.RevokedAtUtc = DateTime.UtcNow;
