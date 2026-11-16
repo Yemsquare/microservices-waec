@@ -164,4 +164,4 @@ public sealed record CreateStaffRequest(string Email, string TemporaryPassword, 
 
 // Identity owns authentication data separately from examination-registration data.
 public sealed class AuthDbContext(DbContextOptions<AuthDbContext> options)
-    : IdentityDbContext<IdentityUser>(options);
+    : IdentityDbContext<IdentityUser>(options) { }
