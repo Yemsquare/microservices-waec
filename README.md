@@ -5,7 +5,7 @@ A hands-on .NET 8 training repository for the WAEC engineering team. The project
 ## Architecture
 
 - **ExamGateway** — YARP API gateway and JWT validation / authorization boundary, public entry point on port 8080.
-- **AuthService** — ASP.NET Core Identity, SQL Server user store, password hashing, JWT issuance, and role provisioning (port 8084 for local diagnostics).
+- **AuthService** — ASP.NET Core Identity, SQL Server user store, password hashing, JWT issuance, rotating refresh tokens, permission claims, and administrator user management (port 8084 for local diagnostics).
 - **CatalogService** — REST API for subject catalogue concepts.
 - **OrdersService** — synchronous service-to-service HTTP example.
 - **RegistrationService** — examination registration API, SQL Server persistence with EF Core, validation and duplicate prevention.
@@ -51,7 +51,7 @@ TOKEN=$(curl -s -X POST http://localhost:8080/api/auth/login -H "Content-Type: a
 curl http://localhost:8080/api/auth/me -H "Authorization: Bearer $TOKEN"
 ```
 
-A Candidate can read the subject catalogue and create a registration. Only Examiner and Administrator can read all registrations or modify the catalogue. Only Administrator can provision staff accounts through `POST /api/auth/users`.
+A Candidate can read the subject catalogue and create a registration. Examiner and Administrator can read registrations and manage the catalogue. Only Administrator has the `users.manage` permission to provision staff, list users, change roles, and disable/enable accounts. Access tokens last 10 minutes by default; refresh tokens are opaque, hashed at rest, single-use, and rotated on refresh.
 
 ## Authorization matrix
 
@@ -83,11 +83,12 @@ See [tests/README.md](tests/README.md) for the existing module-by-module integra
 6. `training/day-6-durable-registration-and-messaging.md` — EF Core, SQL Server, RabbitMQ, background worker.
 7. `training/day-7-testing-and-ci.md` — module-by-module automated integration tests and CI.
 8. `training/day-8-authentication-and-rbac.md` — Identity, JWT, claims, roles, and gateway authorization.
+9. `training/day-9-refresh-tokens-permissions-and-user-management.md` — refresh-token rotation, permission-based policies, and administrator user management.
 
 ## Security and reliability notes
 
 - Gateway is the intended API entry point. Compose still publishes backend ports for local training and existing direct-service integration tests; remove those port mappings and enforce service-level authorization before any public deployment.
-- JWTs are signed, not encrypted. Keep secrets out of source control. Use managed secret storage, asymmetric keys/identity provider, MFA, lockout, rate limiting, key rotation, refresh-token rotation, audit logging, and short-lived access tokens for production.
+- JWTs are signed, not encrypted. Keep secrets out of source control. Use managed secret storage, an OpenID Connect identity provider or asymmetric keys, MFA, lockout, rate limiting, key rotation, audit logging, and short-lived access tokens for production. Browser clients should keep refresh tokens in secure HTTP-only cookies; mobile clients should use OS-protected secure storage.
 - The workshop uses `EnsureCreated` for quick setup. Replace it with versioned EF migrations for production.
 - SQL Server and RabbitMQ credentials are local-lab defaults only. Do not expose infrastructure ports publicly.
 - Registration persistence and event publication are separate operations; a transactional outbox is the production solution to the dual-write gap.
