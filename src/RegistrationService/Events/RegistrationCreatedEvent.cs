@@ -1,0 +1,1 @@
+namespace RegistrationService.Events;public sealed record RegistrationCreatedEvent(int RegistrationId,string CandidateNumber,string CandidateName,string ExamSession,string Subjects,DateTime CreatedAtUtc);
