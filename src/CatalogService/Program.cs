@@ -1,9 +1,56 @@
+using Microsoft.OpenApi.Models;
 using System.Collections.Concurrent;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Register OpenAPI generation and interactive API documentation.
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "WAEC Catalog Service API",
+        Version = "v1",
+        Description = "Manage the WAEC examination subject catalogue."
+    });
+
+    // Let learners provide a JWT access token using Swagger's Authorize button.
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Paste the JWT access token. Swagger adds the Bearer prefix."
+    });
+
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
 // Register a singleton store. In-memory storage keeps early labs simple; production needs a database.
 builder.Services.AddSingleton<SubjectStore>();
 var app = builder.Build();
+
+// Serve the OpenAPI document and interactive Swagger UI.
+app.UseSwagger();
+app.UseSwaggerUI(options =>
+{
+    options.SwaggerEndpoint("/swagger/v1/swagger.json", "WAEC Catalog Service API V1");
+    options.RoutePrefix = "swagger";
+});
 
 app.MapGet("/health", () => Results.Ok(new { service = "catalog", status = "healthy" }));
 app.MapGet("/api/catalog/subjects", (SubjectStore store) => Results.Ok(store.GetAll()));
