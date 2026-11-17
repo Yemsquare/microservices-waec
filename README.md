@@ -92,3 +92,7 @@ See [tests/README.md](tests/README.md) for the existing module-by-module integra
 - The workshop uses `EnsureCreated` for quick setup. Replace it with versioned EF migrations for production.
 - SQL Server and RabbitMQ credentials are local-lab defaults only. Do not expose infrastructure ports publicly.
 - Registration persistence and event publication are separate operations; a transactional outbox is the production solution to the dual-write gap.
+
+
+POSTMAN TESTING LINK 
+https://aerospace-operator-72165908-s-team.postman.co/workspace/Weac~60ea1d20-e268-4580-adbd-f1e7cbf64fdc/collection/25896085-03717665-9695-46e2-a08b-766a8f930dff?action=share&creator=25896085
