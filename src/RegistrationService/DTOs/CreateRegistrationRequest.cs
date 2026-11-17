@@ -1,0 +1,1 @@
+namespace RegistrationService.DTOs;public sealed record CreateRegistrationRequest(string CandidateNumber,string CandidateName,string ExamSession,List<string> Subjects);
