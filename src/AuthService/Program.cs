@@ -1,3 +1,4 @@
+using Microsoft.OpenApi.Models;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -9,6 +10,44 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Register OpenAPI generation and interactive API documentation.
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "WAEC Authentication Service API",
+        Version = "v1",
+        Description = "Authentication, JWT issuance, refresh tokens, roles, permissions, and user administration."
+    });
+
+    // Let learners provide a JWT access token using Swagger's Authorize button.
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Paste the JWT access token. Swagger adds the Bearer prefix."
+    });
+
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
 var jwt = builder.Configuration.GetSection("Jwt");
 var signingKey = jwt["Key"] ?? throw new InvalidOperationException("Jwt:Key must be configured.");
 if (Encoding.UTF8.GetByteCount(signingKey) < 32)
@@ -56,6 +95,14 @@ builder.Services.AddAuthorization(options =>
 });
 
 var app = builder.Build();
+
+// Serve the OpenAPI document and interactive Swagger UI.
+app.UseSwagger();
+app.UseSwaggerUI(options =>
+{
+    options.SwaggerEndpoint("/swagger/v1/swagger.json", "WAEC Authentication Service API V1");
+    options.RoutePrefix = "swagger";
+});
 app.UseAuthentication();
 app.UseAuthorization();
 
