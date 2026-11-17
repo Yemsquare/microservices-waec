@@ -1,0 +1,1 @@
+namespace CatalogService.Models;public sealed record CreateSubjectRequest(string Code,string Name,bool Active=true);public sealed record UpdateSubjectRequest(string Code,string Name,bool Active);public sealed record Subject(int Id,string Code,string Name,bool Active);
