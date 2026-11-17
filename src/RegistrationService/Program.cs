@@ -1,9 +1,48 @@
+using Microsoft.OpenApi.Models;
 using System.Text;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using RabbitMQ.Client;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Register OpenAPI generation and interactive API documentation.
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "WAEC Registration Service API",
+        Version = "v1",
+        Description = "Register candidates for examination sessions and publish registration events."
+    });
+
+    // Let learners provide a JWT access token using Swagger's Authorize button.
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Paste the JWT access token. Swagger adds the Bearer prefix."
+    });
+
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
 
 // Compose injects these settings so secrets and environment-specific values are not hard-coded in source.
 builder.Services.AddDbContext<RegistrationDbContext>(options =>
@@ -12,6 +51,14 @@ builder.Services.AddDbContext<RegistrationDbContext>(options =>
 builder.Services.AddSingleton<RegistrationEventPublisher>();
 
 var app = builder.Build();
+
+// Serve the OpenAPI document and interactive Swagger UI.
+app.UseSwagger();
+app.UseSwaggerUI(options =>
+{
+    options.SwaggerEndpoint("/swagger/v1/swagger.json", "WAEC Registration Service API V1");
+    options.RoutePrefix = "swagger";
+});
 
 // EnsureCreated is acceptable for a disposable training lab; production systems should use EF migrations.
 using (var scope = app.Services.CreateScope())
