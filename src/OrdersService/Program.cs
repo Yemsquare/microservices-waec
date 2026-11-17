@@ -1,8 +1,47 @@
+using Microsoft.OpenApi.Models;
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Http.Json;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Register OpenAPI generation and interactive API documentation.
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "WAEC Orders Service API",
+        Version = "v1",
+        Description = "Create and inspect examination orders, validating subjects through Catalog Service."
+    });
+
+    // Let learners provide a JWT access token using Swagger's Authorize button.
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Paste the JWT access token. Swagger adds the Bearer prefix."
+    });
+
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
 // Docker overrides Catalog:BaseUrl with http://catalog:8080 through environment configuration.
 var catalogBaseUrl = builder.Configuration["Catalog:BaseUrl"] ?? "http://localhost:8081";
 builder.Services.AddHttpClient<CatalogClient>(client =>
@@ -12,6 +51,14 @@ builder.Services.AddHttpClient<CatalogClient>(client =>
 });
 builder.Services.AddSingleton<OrderStore>();
 var app = builder.Build();
+
+// Serve the OpenAPI document and interactive Swagger UI.
+app.UseSwagger();
+app.UseSwaggerUI(options =>
+{
+    options.SwaggerEndpoint("/swagger/v1/swagger.json", "WAEC Orders Service API V1");
+    options.RoutePrefix = "swagger";
+});
 
 app.MapGet("/health", () => Results.Ok(new { service = "orders", status = "healthy" }));
 app.MapGet("/api/orders", (OrderStore store) => Results.Ok(store.GetAll()));
