@@ -1,0 +1,1 @@
+namespace RegistrationService.Entities;public sealed class ExamRegistration{public int Id{get;set;}public string CandidateNumber{get;set;}="";public string CandidateName{get;set;}="";public string ExamSession{get;set;}="";public string Subjects{get;set;}="";public DateTime CreatedAtUtc{get;set;}}
