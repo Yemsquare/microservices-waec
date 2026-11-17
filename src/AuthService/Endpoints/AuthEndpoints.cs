@@ -99,8 +99,8 @@ app.MapPost("/api/auth/logout", async (RefreshRequest request, AuthDbContext db)
 // The /me endpoint demonstrates reading identity, roles, and fine-grained permissions from JWT claims.
 app.MapGet("/api/auth/me", (ClaimsPrincipal user) => Results.Ok(new
 {
-    id = user.FindFirstValue(JwtRegisteredClaimNames.Sub),
-    email = user.FindFirstValue(JwtRegisteredClaimNames.Email),
+    id = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirstValue(JwtRegisteredClaimNames.Sub),
+    email = user.FindFirstValue(ClaimTypes.Email) ?? user.FindFirstValue(JwtRegisteredClaimNames.Email),
     roles = user.FindAll(ClaimTypes.Role).Select(c => c.Value),
     permissions = user.FindAll("permission").Select(c => c.Value)
 })).RequireAuthorization();
@@ -109,7 +109,9 @@ app.MapGet("/api/auth/me", (ClaimsPrincipal user) => Results.Ok(new
 app.MapGet("/api/auth/users", async (UserManager<IdentityUser> users) =>
 {
     var result = new List<UserSummary>();
-    foreach (var user in users.Users.OrderBy(x => x.Email))
+    // Materialize users before querying Identity roles to avoid an open DataReader on the same connection.
+    var allUsers = await users.Users.OrderBy(x => x.Email).ToListAsync();
+    foreach (var user in allUsers)
     {
         var roles = await users.GetRolesAsync(user);
         result.Add(new UserSummary(user.Id, user.Email ?? "", roles,
@@ -144,7 +146,7 @@ app.MapPut("/api/auth/users/{userId}/role", async (string userId, ChangeRoleRequ
 
     var target = await users.FindByIdAsync(userId);
     if (target is null) return Results.NotFound();
-    var actorId = actor.FindFirstValue(JwtRegisteredClaimNames.Sub);
+    var actorId = actor.FindFirstValue(ClaimTypes.NameIdentifier) ?? actor.FindFirstValue(JwtRegisteredClaimNames.Sub);
     if (target.Id == actorId && request.Role != "Administrator")
         return Results.BadRequest(new { message = "Administrators cannot remove their own Administrator role." });
 
@@ -163,7 +165,7 @@ app.MapPut("/api/auth/users/{userId}/status", async (string userId, ChangeStatus
 {
     var target = await users.FindByIdAsync(userId);
     if (target is null) return Results.NotFound();
-    if (target.Id == actor.FindFirstValue(JwtRegisteredClaimNames.Sub) && !request.Enabled)
+    if (target.Id == (actor.FindFirstValue(ClaimTypes.NameIdentifier) ?? actor.FindFirstValue(JwtRegisteredClaimNames.Sub)) && !request.Enabled)
         return Results.BadRequest(new { message = "Administrators cannot disable their own account." });
 
     target.LockoutEnabled = true;
