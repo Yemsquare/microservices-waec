@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
+
 var builder = WebApplication.CreateBuilder(args);
 var jwt = builder.Configuration.GetSection("Jwt");
 var signingKey = jwt["Key"] ?? throw new InvalidOperationException("Jwt:Key must be configured.");
@@ -197,26 +198,73 @@ app.MapPost("/api/auth/logout", async (RefreshRequest request, AuthDbContext db)
     return Results.NoContent();
 });
 
-// The /me endpoint demonstrates reading identity, roles, and fine-grained permissions from JWT claims.
+// Return the authenticated user's identity, roles, and permissions.
 app.MapGet("/api/auth/me", (ClaimsPrincipal user) => Results.Ok(new
 {
-    id = user.FindFirstValue(JwtRegisteredClaimNames.Sub),
-    email = user.FindFirstValue(JwtRegisteredClaimNames.Email),
+    // ASP.NET Core maps the JWT 'sub' claim to NameIdentifier.
+    // The fallback supports tokens where inbound claim mapping is disabled.
+    id = user.FindFirstValue(ClaimTypes.NameIdentifier)
+         ?? user.FindFirstValue(JwtRegisteredClaimNames.Sub),
+
+    // ASP.NET Core maps the JWT 'email' claim to ClaimTypes.Email.
+    email = user.FindFirstValue(ClaimTypes.Email)
+            ?? user.FindFirstValue(JwtRegisteredClaimNames.Email),
+
+    // Retrieve the user's assigned roles.
     roles = user.FindAll(ClaimTypes.Role).Select(c => c.Value),
+
+    // Retrieve fine-grained permissions.
     permissions = user.FindAll("permission").Select(c => c.Value)
+
 })).RequireAuthorization();
 
 // Admin user management: list accounts without password/security fields.
-app.MapGet("/api/auth/users", async (UserManager<IdentityUser> users) =>
+// app.MapGet("/api/auth/users", async (UserManager<IdentityUser> users) =>
+// {
+//     var result = new List<UserSummary>();
+//     foreach (var user in users.Users.OrderBy(x => x.Email))
+//     {
+//         var roles = await users.GetRolesAsync(user);
+//         result.Add(new UserSummary(user.Id, user.Email ?? "", roles,
+//             user.LockoutEnd is not null && user.LockoutEnd > DateTimeOffset.UtcNow));
+//     }
+//     return Results.Ok(result);
+// }).RequireAuthorization("AdminOnly");
+
+// Admin user management: retrieve all registered users and their assigned roles.
+app.MapGet("/api/auth/users", async (
+    UserManager<IdentityUser> users,
+    CancellationToken cancellationToken) =>
 {
-    var result = new List<UserSummary>();
-    foreach (var user in users.Users.OrderBy(x => x.Email))
+    // IMPORTANT:
+    // Execute the database query and load all users into memory first.
+    // This closes the database DataReader before we execute other queries.
+    var allUsers = await users.Users
+        .OrderBy(user => user.Email)
+        .ToListAsync(cancellationToken);
+
+    // Prepare a collection to hold the user summaries.
+    var result = new List<UserSummary>(allUsers.Count);
+
+    // Now that all users are loaded, retrieve their roles individually.
+    foreach (var user in allUsers)
     {
+        // This database query can now execute safely.
         var roles = await users.GetRolesAsync(user);
-        result.Add(new UserSummary(user.Id, user.Email ?? "", roles,
-            user.LockoutEnd is not null && user.LockoutEnd > DateTimeOffset.UtcNow));
+
+        // Return safe user information without exposing password or security data.
+        result.Add(new UserSummary(
+            user.Id,
+            user.Email ?? "",
+            roles,
+            user.LockoutEnd is not null &&
+            user.LockoutEnd > DateTimeOffset.UtcNow
+        ));
     }
+
+    // Return the complete list of users.
     return Results.Ok(result);
+
 }).RequireAuthorization("AdminOnly");
 
 // Provision staff accounts. Public registration cannot create Examiner or Administrator accounts.
