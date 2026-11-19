@@ -100,9 +100,12 @@ services:
     environment:
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__StudentDatabase: "Server=sqlserver,1433;Database=WaecRegistrations;User Id=sa;Password=TrainingOnly_StrongPassword_2026!;TrustServerCertificate=True"
-      # ConnectionStrings__StudentDatabase: "Server=host.docker.internal,1433;Database=StudentDB;Trusted_Connection=True;TrustServerCertificate=True;"
     ports:
       - "8085:8080"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    restart: unless-stopped
    
   gateway:
     build:

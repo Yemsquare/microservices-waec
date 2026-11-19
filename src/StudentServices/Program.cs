@@ -27,11 +27,10 @@ builder.Services.AddProblemDetails();
 var app = builder.Build();
 
 // Enable swagger in development environment
-if (app.Environment.IsDevelopment())
-{
+
     app.UseSwagger();
     app.UseSwaggerUI();
-}
+
 
 // convert unhandled exceptions to ProblemDetails responses
 app.UseExceptionHandler();
