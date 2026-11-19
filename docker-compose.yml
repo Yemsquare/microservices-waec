@@ -95,9 +95,10 @@ services:
     ports:
       - "8083:8080"
     depends_on:
-      - sqlserver
-      - rabbitmq:
-          condition: service_healthy
+      sqlserver:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
     restart: unless-stopped
 
   notification-worker:
