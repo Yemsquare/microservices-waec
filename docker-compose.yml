@@ -1,4 +1,4 @@
-# Services communicate over the private Compose network. The gateway is the intended public API entry point.
+# All WAEC services run on one Compose network. Use ExamGateway as the public API entry point.
 services:
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
@@ -9,6 +9,8 @@ services:
       - "1433:1433"
     volumes:
       - waec-sql-data:/var/opt/mssql
+    restart: unless-stopped
+
   rabbitmq:
     image: rabbitmq:3-management
     environment:
@@ -22,6 +24,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+    restart: unless-stopped
+
   auth:
     build:
       context: .
@@ -39,9 +43,22 @@ services:
     ports:
       - "8084:8080"
     depends_on:
-      sqlserver:
-        condition: service_started
+      - sqlserver
     restart: unless-stopped
+
+  studentservice:
+    build:
+      context: .
+      dockerfile: src/Services/StudentService/Dockerfile
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__StudentDatabase: "Server=sqlserver,1433;Database=WaecStudentDb;User Id=sa;Password=TrainingOnly_StrongPassword_2026!;TrustServerCertificate=True;Encrypt=True"
+    ports:
+      - "8085:8080"
+    depends_on:
+      - sqlserver
+    restart: unless-stopped
+
   catalog:
     build:
       context: .
@@ -50,6 +67,8 @@ services:
       ASPNETCORE_URLS: http://+:8080
     ports:
       - "8081:8080"
+    restart: unless-stopped
+
   orders:
     build:
       context: .
@@ -61,6 +80,8 @@ services:
       - "8082:8080"
     depends_on:
       - catalog
+    restart: unless-stopped
+
   registration:
     build:
       context: .
@@ -74,10 +95,11 @@ services:
     ports:
       - "8083:8080"
     depends_on:
-      sqlserver:
-        condition: service_started
-      rabbitmq:
-        condition: service_healthy
+      - sqlserver
+      - rabbitmq:
+          condition: service_healthy
+    restart: unless-stopped
+
   notification-worker:
     build:
       context: .
@@ -90,6 +112,7 @@ services:
       rabbitmq:
         condition: service_healthy
     restart: unless-stopped
+
   gateway:
     build:
       context: .
@@ -100,6 +123,7 @@ services:
       Jwt__Audience: Waec.Api
       Jwt__Key: ${JWT_KEY:-local-only-change-this-development-key-before-deployment-2026}
       ReverseProxy__Clusters__auth__Destinations__destination1__Address: http://auth:8080/
+      ReverseProxy__Clusters__student__Destinations__destination1__Address: http://studentservice:8080/
       ReverseProxy__Clusters__catalog__Destinations__destination1__Address: http://catalog:8080/
       ReverseProxy__Clusters__orders__Destinations__destination1__Address: http://orders:8080/
       ReverseProxy__Clusters__registration__Destinations__destination1__Address: http://registration:8080/
@@ -107,9 +131,11 @@ services:
       - "8080:8080"
     depends_on:
       - auth
+      - studentservice
       - catalog
       - orders
       - registration
+    restart: unless-stopped
 
 volumes:
   waec-sql-data:
