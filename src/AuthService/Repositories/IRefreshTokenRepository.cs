@@ -7,6 +7,7 @@ public interface IRefreshTokenRepository
 {
     Task AddAsync(RefreshToken token, CancellationToken ct = default);
     Task<RefreshToken?> GetByHashAsync(string tokenHash, bool includeUser, CancellationToken ct = default);
+    Task RevokeChainAsync(string firstTokenHash, DateTime nowUtc, CancellationToken ct = default);
     Task SaveChangesAsync(CancellationToken ct = default);
     Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken ct = default);
 }

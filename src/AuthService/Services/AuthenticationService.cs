@@ -11,7 +11,8 @@ public sealed class AuthenticationService(
     UserManager<IdentityUser> users,
     SignInManager<IdentityUser> signIn,
     ITokenService tokenService,
-    IRefreshTokenRepository refreshTokens) : IAuthenticationService
+    IRefreshTokenRepository refreshTokens,
+    ILogger<AuthenticationService> logger) : IAuthenticationService
 {
     public async Task<Result<UserCreatedResponse>> RegisterAsync(RegisterRequest request, CancellationToken ct = default)
     {
@@ -41,12 +42,28 @@ public sealed class AuthenticationService(
     {
         try
         {
-            // Lookup, revoke, and replace in one transaction to block parallel token reuse.
             await using var tx = await refreshTokens.BeginTransactionAsync(ct);
 
             var stored = await refreshTokens.GetByHashAsync(TokenHasher.Hash(request.RefreshToken), includeUser: true, ct);
+            if (stored is null)
+                return Result<TokenPairResponse>.Fail(ErrorType.Unauthorized);
+
             var now = DateTime.UtcNow;
-            if (stored is null || !stored.IsActive(now) || IsLockedOut(stored.User, now))
+
+            if (stored.RevokedAtUtc is not null)
+            {
+                // A rotated token was presented again: either a thief or the real client holds a stale copy.
+                // Kill every descendant so neither side keeps a working session.
+                if (stored.ReplacedByTokenHash is not null)
+                {
+                    await refreshTokens.RevokeChainAsync(stored.ReplacedByTokenHash, now, ct);
+                    await tx.CommitAsync(ct);
+                    logger.LogWarning("Refresh token reuse detected for user {UserId}; token chain revoked.", stored.UserId);
+                }
+                return Result<TokenPairResponse>.Fail(ErrorType.Unauthorized);
+            }
+
+            if (!stored.IsActive(now) || IsLockedOut(stored.User, now))
                 return Result<TokenPairResponse>.Fail(ErrorType.Unauthorized);
 
             stored.RevokedAtUtc = now;
@@ -59,7 +76,6 @@ public sealed class AuthenticationService(
         }
         catch (DbUpdateConcurrencyException)
         {
-            // Another request already rotated this token.
             return Result<TokenPairResponse>.Fail(ErrorType.Unauthorized);
         }
     }

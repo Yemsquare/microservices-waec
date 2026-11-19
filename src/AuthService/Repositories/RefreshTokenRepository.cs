@@ -17,6 +17,19 @@ public sealed class RefreshTokenRepository(AuthDbContext db) : IRefreshTokenRepo
         return query.SingleOrDefaultAsync(x => x.TokenHash == tokenHash, ct);
     }
 
+     // Follows ReplacedByTokenHash forward and revokes each descendant. The cap guards against a corrupted (cyclic) chain.
+    public async Task RevokeChainAsync(string firstTokenHash, DateTime nowUtc, CancellationToken ct = default)
+    {
+        string? hash = firstTokenHash;
+        for (var i = 0; i < 100 && hash is not null; i++)
+        {
+            var token = await db.RefreshTokens.SingleOrDefaultAsync(x => x.TokenHash == hash, ct);
+            if (token is null) break;
+            token.RevokedAtUtc ??= nowUtc;
+            hash = token.ReplacedByTokenHash;
+        }
+        await db.SaveChangesAsync(ct);
+    }
     public Task SaveChangesAsync(CancellationToken ct = default) => db.SaveChangesAsync(ct);
 
     public Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken ct = default) =>
