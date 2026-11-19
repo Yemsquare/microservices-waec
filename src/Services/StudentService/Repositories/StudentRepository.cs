@@ -18,8 +18,10 @@ public class StudentRepository(StudentDbContext db) : IStudentRepository
     public Task<bool> RegistrationNumberExistsAsync(string number, CancellationToken cancellationToken) =>
         db.Students.AnyAsync(student => student.RegistrationNumber == number, cancellationToken);
 
-    public async Task AddAsync(Student student, CancellationToken cancellationToken) =>
+    public async Task AddAsync(Student student, CancellationToken cancellationToken)
+    {
         await db.Students.AddAsync(student, cancellationToken);
+    }
 
     public Task SaveChangesAsync(CancellationToken cancellationToken) =>
         db.SaveChangesAsync(cancellationToken);
