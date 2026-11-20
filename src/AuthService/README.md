@@ -17,6 +17,6 @@ Public registration always assigns Candidate. A caller cannot submit a role to e
 - `GET /health`
 
 ## Local security configuration
-Set `Jwt__Key` to a random secret of at least 32 UTF-8 bytes and use the exact same key, issuer, and audience in AuthService and ExamGateway. Set `BootstrapAdmin__Email` and `BootstrapAdmin__Password` to provision the first administrator. Never commit production secrets.
+Create the repository-root `.env` from `.env.example`. Configure `JWT_KEY`, `JWT_ISSUER`, `JWT_AUDIENCE`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` there. Docker Compose injects the same JWT signing key, issuer, and audience into AuthService and ExamGateway. Use a cryptographically random JWT key of at least 32 bytes and a strong unique bootstrap administrator password. Never commit the real `.env` or put secrets in appsettings files. Rotate credentials that may have been committed previously.
 
 This training service uses Identity password hashing and SQL Server. It uses `EnsureCreated` to reduce workshop setup; production should use migrations, secret management, MFA, lockout policy, refresh-token rotation, audit logging, rate limiting, and key rotation.
