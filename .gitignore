@@ -5,5 +5,10 @@
 .idea/
 *.user
 *.suo
+
+# Local secrets and environment files
 .env
+.env.*
+!.env.example
+
 .DS_Store
