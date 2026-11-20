@@ -22,12 +22,13 @@ By the end of this lab, learners can explain authentication versus authorization
 | Provision staff accounts | No | No | Yes |
 
 ## Start and configure
-The Docker Compose lab uses local-only defaults for convenience. Before running, replace `Jwt__Key`, `BootstrapAdmin__Email`, and `BootstrapAdmin__Password` in your local environment. Keep the same JWT key, issuer, and audience in AuthService and ExamGateway. Do not use workshop defaults on a public server.
+
+Create the repository-root `.env` file from `.env.example`, replace every placeholder with a strong unique value, then start the stack. The JWT key, issuer, and audience are injected into both AuthService and ExamGateway from the same `.env` file. Never commit the real `.env`.
 
 ```bash
-export JWT_KEY='replace-with-a-random-secret-at-least-32-bytes-long'
-export ADMIN_EMAIL='admin@waec-training.local'
-export ADMIN_PASSWORD='Replace-With-A-Strong-Password-2026!'
+cp .env.example .env
+# Edit .env and replace the placeholder values.
+docker compose config
 docker compose up -d --build
 ```
 
