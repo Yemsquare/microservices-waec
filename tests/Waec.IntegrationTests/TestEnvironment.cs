@@ -13,8 +13,8 @@ internal static class TestEnvironment
     public static HttpClient CreateRabbitManagementClient()
     {
         var client = CreateClient("RABBITMQ_MANAGEMENT_URL", "http://localhost:15672/");
-        var username = Environment.GetEnvironmentVariable("RABBITMQ_USER") ?? "waec";
-        var password = Environment.GetEnvironmentVariable("RABBITMQ_PASSWORD") ?? "training-local-only";
+        var username = Environment.GetEnvironmentVariable("RABBITMQ_USER") ?? throw new InvalidOperationException("RABBITMQ_USER must be set for integration tests.");
+        var password = Environment.GetEnvironmentVariable("RABBITMQ_PASSWORD") ?? throw new InvalidOperationException("RABBITMQ_PASSWORD must be set for integration tests.");
         var credentials = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes($"{username}:{password}"));
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", credentials);
         return client;
