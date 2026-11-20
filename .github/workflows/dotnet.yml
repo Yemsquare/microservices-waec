@@ -2,7 +2,7 @@ name: .NET build and integration tests
 
 on:
   push:
-    branches: [ master, main, feature/auth-rbac ]
+    branches: [ master, main, feature/auth-rbac, feature/unified-student-service ]
   pull_request:
     branches: [ master, main ]
 
@@ -18,23 +18,40 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
-      - name: Build AuthService
-        run: dotnet build src/AuthService/AuthService.csproj --configuration Release
+      - name: Build services
+        run: |
+          dotnet build src/AuthService/AuthService.csproj --configuration Release
+          dotnet build src/CatalogService/CatalogService.csproj --configuration Release
+          dotnet build src/OrdersService/OrdersService.csproj --configuration Release
+          dotnet build src/ExamGateway/ExamGateway.csproj --configuration Release
+          dotnet build src/RegistrationService/RegistrationService.csproj --configuration Release
+          dotnet build src/NotificationWorker/NotificationWorker.csproj --configuration Release
+          dotnet build src/Services/StudentService/StudentService.csproj --configuration Release
 
-      - name: Build CatalogService
-        run: dotnet build src/CatalogService/CatalogService.csproj --configuration Release
-
-      - name: Build OrdersService
-        run: dotnet build src/OrdersService/OrdersService.csproj --configuration Release
-
-      - name: Build ExamGateway
-        run: dotnet build src/ExamGateway/ExamGateway.csproj --configuration Release
-
-      - name: Build RegistrationService
-        run: dotnet build src/RegistrationService/RegistrationService.csproj --configuration Release
-
-      - name: Build NotificationWorker
-        run: dotnet build src/NotificationWorker/NotificationWorker.csproj --configuration Release
+      - name: Create ephemeral CI secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo "MSSQL_SA_PASSWORD=$(openssl rand -hex 24)Aa1!"
+            echo "JWT_KEY=$(openssl rand -hex 32)"
+            echo "JWT_ISSUER=Waec.Auth"
+            echo "JWT_AUDIENCE=Waec.Api"
+            echo "JWT_ACCESS_TOKEN_MINUTES=30"
+            echo "JWT_REFRESH_TOKEN_DAYS=7"
+            echo "ADMIN_EMAIL=admin@waec-training.local"
+            echo "ADMIN_PASSWORD=$(openssl rand -hex 24)Aa1!"
+            echo "RABBITMQ_DEFAULT_USER=waec"
+            echo "RABBITMQ_DEFAULT_PASS=$(openssl rand -hex 24)"
+          } > .env
+          {
+            grep -v '^MSSQL_SA_PASSWORD=' .env
+            grep '^MSSQL_SA_PASSWORD=' .env
+          } >> "$GITHUB_ENV"
+          echo "GATEWAY_BASE_URL=http://localhost:8080/" >> "$GITHUB_ENV"
+          echo "RABBITMQ_MANAGEMENT_URL=http://localhost:15672/" >> "$GITHUB_ENV"
+          grep '^RABBITMQ_DEFAULT_USER=' .env | sed 's/^RABBITMQ_DEFAULT_USER=/RABBITMQ_USER=/' >> "$GITHUB_ENV"
+          grep '^RABBITMQ_DEFAULT_PASS=' .env | sed 's/^RABBITMQ_DEFAULT_PASS=/RABBITMQ_PASSWORD=/' >> "$GITHUB_ENV"
 
       - name: Start the Docker Compose environment
         run: docker compose up -d --build
@@ -49,8 +66,8 @@ jobs:
             "http://localhost:8082/health"
             "http://localhost:8083/health"
             "http://localhost:8084/health"
+            "http://localhost:8085/health"
           )
-
           for endpoint in "${endpoints[@]}"; do
             ready=false
             for attempt in {1..90}; do
@@ -70,7 +87,7 @@ jobs:
 
           rabbit_ready=false
           for attempt in {1..60}; do
-            if curl --fail --silent --user "waec:training-local-only" http://localhost:15672/api/overview >/dev/null; then
+            if curl --fail --silent --user "$RABBITMQ_USER:$RABBITMQ_PASSWORD" http://localhost:15672/api/overview >/dev/null; then
               rabbit_ready=true
               echo "Ready: RabbitMQ management API"
               break
