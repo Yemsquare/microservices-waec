@@ -14,25 +14,38 @@ A hands-on .NET 8 training repository for the WAEC engineering team. The project
 - **RabbitMQ** — message broker with management UI on port 15672.
 - **GitHub Actions** — builds the services and runs Docker-backed integration tests.
 
-## Run the stack
+## Configure secrets and run the stack
 
-Use a unique signing key and bootstrap administrator password for your local environment. These values are local examples only; never commit real secrets.
+All passwords, database credentials, RabbitMQ credentials, and JWT signing keys are supplied through the root `.env` file. The actual `.env` is ignored by Git; only `.env.example` is committed.
+
+Create your local file:
 
 ```bash
-export JWT_KEY='replace-with-a-random-secret-at-least-32-bytes-long'
-export ADMIN_EMAIL='admin@waec-training.local'
-export ADMIN_PASSWORD='Replace-With-A-Strong-Password-2026!'
+cp .env.example .env
+```
+
+Edit `.env` and replace every placeholder with a unique strong value. Generate random hexadecimal secrets with `openssl rand -hex 32`. Use separate values for SQL Server, the bootstrap administrator password, RabbitMQ, and the JWT signing key. AuthService and ExamGateway must share the same JWT key, issuer, and audience.
+
+Validate and start the full stack:
+
+```bash
+docker compose config
 docker compose up -d --build
 docker compose ps
 ```
 
+Stop containers without deleting persistent database data:
+
+```bash
+docker compose down
+```
+
 Endpoints:
 - Gateway health: http://localhost:8080/health
+- Student API through gateway: http://localhost:8080/api/students (Bearer token required)
 - AuthService health: http://localhost:8084/health
-- Login/register: http://localhost:8080/api/auth
-- Subject catalogue: http://localhost:8080/api/catalog/subjects (Bearer token required)
-- Registrations: http://localhost:8080/api/registrations (role restricted)
-- RabbitMQ management: http://localhost:15672 (training-only login: waec / training-local-only)
+- StudentService Swagger for local training: http://localhost:8085/swagger
+- RabbitMQ management: http://localhost:15672 (use credentials from your local `.env`)
 
 ## Authentication quick start
 
@@ -96,3 +109,9 @@ See [tests/README.md](tests/README.md) for the existing module-by-module integra
 
 POSTMAN TESTING LINK 
 https://aerospace-operator-72165908-s-team.postman.co/workspace/Weac~60ea1d20-e268-4580-adbd-f1e7cbf64fdc/collection/25896085-03717665-9695-46e2-a08b-766a8f930dff?action=share&creator=25896085
+## Secrets and deployment safety
+
+- Never commit `.env`; `.env.example` contains placeholders only.
+- Rotate credentials that were previously committed. Removing a secret in a later commit does not remove it from Git history.
+- Backend ports are published for local training; remove those mappings and enforce service-level authorization before public deployment.
+- Do not expose SQL Server or RabbitMQ ports publicly. Use managed secret storage and key rotation in production.
