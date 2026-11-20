@@ -90,8 +90,8 @@ public sealed class ExamGatewayTests
 
     private async Task<string> GetAdminTokenAsync()
     {
-        var email = Environment.GetEnvironmentVariable("ADMIN_EMAIL") ?? "admin@waec-training.local";
-        var password = Environment.GetEnvironmentVariable("ADMIN_PASSWORD") ?? "ChangeThis-Admin-Password-2026!";
+        var email = Environment.GetEnvironmentVariable("ADMIN_EMAIL") ?? throw new InvalidOperationException("ADMIN_EMAIL must be set for integration tests.");
+        var password = Environment.GetEnvironmentVariable("ADMIN_PASSWORD") ?? throw new InvalidOperationException("ADMIN_PASSWORD must be set for integration tests.");
         var response = await _client.PostAsJsonAsync("/api/auth/login", new { email, password });
         response.EnsureSuccessStatusCode();
         using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
