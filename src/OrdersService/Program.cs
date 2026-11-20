@@ -119,6 +119,14 @@ builder.Services.AddHttpClient<ICatalogClient, CatalogClient>(
 // Register the business service.
 builder.Services.AddScoped<IOrderService, OrderService>();
 
+builder.Services.AddHttpClient<ICatalogClient, CatalogClient>(
+    client =>
+    {
+        client.BaseAddress = new Uri(catalogBaseUrl);
+        client.Timeout = TimeSpan.FromSeconds(15);
+    })
+    .AddStandardResilienceHandler();
+
 var app = builder.Build();
 
 

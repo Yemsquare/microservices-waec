@@ -44,25 +44,29 @@ services:
       sqlserver:
         condition: service_started
     restart: unless-stopped
+  
   catalog:
     build:
-      context: .
-      dockerfile: src/CatalogService/Dockerfile
-    environment:
-      ASPNETCORE_URLS: http://+:8080
+      context: ./src/CatalogService
+      dockerfile: Dockerfile
+    container_name: waec-catalog-service
     ports:
-      - "8081:8080"
+      - "5001:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+  
   orders:
     build:
-      context: .
-      dockerfile: src/OrdersService/Dockerfile
-    environment:
-      ASPNETCORE_URLS: http://+:8080
-      Catalog__BaseUrl: http://catalog:8080
+      context: ./src/OrdersService
+      dockerfile: Dockerfile
+    container_name: waec-orders-service
     ports:
-      - "8082:8080"
+      - "5002:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      CatalogService__BaseUrl: http://catalog-service:8080/
     depends_on:
-      - catalog
+      - catalog-service
   registration:
     build:
       context: .
