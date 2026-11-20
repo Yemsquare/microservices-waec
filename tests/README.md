@@ -15,11 +15,18 @@ Wait until the containers are healthy/running. Registration Service also waits f
 
 ## 2. Run the tests
 
-Install the .NET 8 SDK, then run:
+Install the .NET 8 SDK. Load the values from your root `.env` into the current shell, then run the tests:
 
 ```bash
+set -a
+source .env
+export RABBITMQ_USER="$RABBITMQ_DEFAULT_USER"
+export RABBITMQ_PASSWORD="$RABBITMQ_DEFAULT_PASS"
+set +a
 dotnet test tests/Waec.IntegrationTests/Waec.IntegrationTests.csproj --configuration Release
 ```
+
+On PowerShell, set the corresponding process environment variables from `.env` before running `dotnet test`.
 
 The test project defaults to these local endpoints:
 
@@ -30,8 +37,10 @@ The test project defaults to these local endpoints:
 | `REGISTRATION_BASE_URL` | `http://localhost:8083/` |
 | `GATEWAY_BASE_URL` | `http://localhost:8080/` |
 | `RABBITMQ_MANAGEMENT_URL` | `http://localhost:15672/` |
-| `RABBITMQ_USER` | `waec` |
-| `RABBITMQ_PASSWORD` | `training-local-only` |
+| `RABBITMQ_USER` | Must match `RABBITMQ_DEFAULT_USER` in `.env` |
+| `RABBITMQ_PASSWORD` | Must match `RABBITMQ_DEFAULT_PASS` in `.env` |
+| `ADMIN_EMAIL` | Must match `ADMIN_EMAIL` in `.env` |
+| `ADMIN_PASSWORD` | Must match `ADMIN_PASSWORD` in `.env` |
 
 Override any URL when running the tests against a different host or port.
 
