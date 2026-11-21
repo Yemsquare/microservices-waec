@@ -4,7 +4,7 @@ services:
     image: mcr.microsoft.com/mssql/server:2022-latest
     environment:
       ACCEPT_EULA: "Y"
-      MSSQL_SA_PASSWORD: "TrainingOnly_StrongPassword_2026!"
+      MSSQL_SA_PASSWORD: ${SQLSERVER_PASSWORD}
     ports:
       - "1433:1433"
     volumes:
@@ -12,8 +12,8 @@ services:
   rabbitmq:
     image: rabbitmq:3-management
     environment:
-      RABBITMQ_DEFAULT_USER: waec
-      RABBITMQ_DEFAULT_PASS: training-local-only
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASSWORD}
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -28,14 +28,14 @@ services:
       dockerfile: src/AuthService/Dockerfile
     environment:
       ASPNETCORE_URLS: http://+:8080
-      ConnectionStrings__Auth: "Server=sqlserver,1433;Database=WaecAuth;User Id=sa;Password=TrainingOnly_StrongPassword_2026!;TrustServerCertificate=True"
-      Jwt__Issuer: Waec.Auth
-      Jwt__Audience: Waec.Api
-      Jwt__Key: ${JWT_KEY:-local-only-change-this-development-key-before-deployment-2026}
-      Jwt__AccessTokenMinutes: ${JWT_ACCESS_TOKEN_MINUTES:-30}
-      Jwt__RefreshTokenDays: ${JWT_REFRESH_TOKEN_DAYS:-7}
-      BootstrapAdmin__Email: ${ADMIN_EMAIL:-admin@waec-training.local}
-      BootstrapAdmin__Password: ${ADMIN_PASSWORD:-ChangeThis-Admin-Password-2026!}
+      ConnectionStrings__Auth: "Server=sqlserver,1433;Database=WaecAuth;User Id=sa;Password=${SQLSERVER_PASSWORD};TrustServerCertificate=True"
+      Jwt__Issuer: ${JWT_ISSUER}
+      Jwt__Audience: ${JWT_AUDIENCE}
+      Jwt__Key: ${JWT_KEY}
+      Jwt__AccessTokenMinutes: ${JWT_ACCESS_TOKEN_MINUTES}
+      Jwt__RefreshTokenDays: ${JWT_REFRESH_TOKEN_DAYS}
+      BootstrapAdmin__Email: ${ADMIN_EMAIL}
+      BootstrapAdmin__Password: ${ADMIN_PASSWORD}
     ports:
       - "8084:8080"
     depends_on:
@@ -67,10 +67,10 @@ services:
       dockerfile: src/RegistrationService/Dockerfile
     environment:
       ASPNETCORE_URLS: http://+:8080
-      ConnectionStrings__Registrations: "Server=sqlserver,1433;Database=WaecRegistrations;User Id=sa;Password=TrainingOnly_StrongPassword_2026!;TrustServerCertificate=True"
-      RabbitMq__Host: rabbitmq
-      RabbitMq__User: waec
-      RabbitMq__Password: training-local-only
+      ConnectionStrings__Registrations: "Server=sqlserver,1433;Database=WaecRegistrations;User Id=sa;Password=${SQLSERVER_PASSWORD};TrustServerCertificate=True"
+      RabbitMq__Host: ${RABBITMQ_HOST}
+      RabbitMq__User: ${RABBITMQ_DEFAULT_USER}
+      RabbitMq__Password: ${RABBITMQ_DEFAULT_PASSWORD}
     ports:
       - "8083:8080"
     depends_on:
@@ -83,9 +83,9 @@ services:
       context: .
       dockerfile: src/NotificationWorker/Dockerfile
     environment:
-      RabbitMq__Host: rabbitmq
-      RabbitMq__User: waec
-      RabbitMq__Password: training-local-only
+      RabbitMq__Host: ${RABBITMQ_HOST}
+      RabbitMq__User: ${RABBITMQ_DEFAULT_USER}
+      RabbitMq__Password: ${RABBITMQ_DEFAULT_PASSWORD}
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -96,9 +96,9 @@ services:
       dockerfile: src/ExamGateway/Dockerfile
     environment:
       ASPNETCORE_URLS: http://+:8080
-      Jwt__Issuer: Waec.Auth
-      Jwt__Audience: Waec.Api
-      Jwt__Key: ${JWT_KEY:-local-only-change-this-development-key-before-deployment-2026}
+      Jwt__Issuer: ${JWT_ISSUER}
+      Jwt__Audience: ${JWT_AUDIENCE}
+      Jwt__Key: ${JWT_KEY}
       ReverseProxy__Clusters__auth__Destinations__destination1__Address: http://auth:8080/
       ReverseProxy__Clusters__catalog__Destinations__destination1__Address: http://catalog:8080/
       ReverseProxy__Clusters__orders__Destinations__destination1__Address: http://orders:8080/

@@ -1,8 +1,18 @@
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.OpenApi.Models;
+
+
 
 var builder = WebApplication.CreateBuilder(args);
+// Register Swagger services
+builder.Services.AddEndpointsApiExplorer();
+
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "Orders API", Version = "v1" });
+});
 // Docker overrides Catalog:BaseUrl with http://catalog:8080 through environment configuration.
 var catalogBaseUrl = builder.Configuration["Catalog:BaseUrl"] ?? "http://localhost:8081";
 builder.Services.AddHttpClient<CatalogClient>(client =>
@@ -38,6 +48,9 @@ app.MapPost("/api/orders", async (CreateOrderRequest request, CatalogClient cata
     var order = store.Add(request, lookup.Subject!.Name);
     return Results.Created($"/api/orders/{order.Id}", order);
 });
+
+app.UseSwaggerUI();
+app.UseSwagger();
 app.Run();
 
 public sealed record CreateOrderRequest(int SubjectId, string CandidateName, string ExamSession);

@@ -1,9 +1,21 @@
 using System.Collections.Concurrent;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.OpenApi.Models; 
 
 var builder = WebApplication.CreateBuilder(args);
 // Register a singleton store. In-memory storage keeps early labs simple; production needs a database.
 builder.Services.AddSingleton<SubjectStore>();
+// Register Swagger services
+builder.Services.AddEndpointsApiExplorer();
+
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "Catalog API", Version = "v1" });
+});
+
 var app = builder.Build();
+
+
 
 app.MapGet("/health", () => Results.Ok(new { service = "catalog", status = "healthy" }));
 app.MapGet("/api/catalog/subjects", (SubjectStore store) => Results.Ok(store.GetAll()));
@@ -26,6 +38,9 @@ app.MapPut("/api/catalog/subjects/{id:int}", (int id, UpdateSubjectRequest reque
 });
 app.MapDelete("/api/catalog/subjects/{id:int}", (int id, SubjectStore store) =>
     store.Delete(id) ? Results.NoContent() : Results.NotFound());
+
+app.UseSwagger();
+app.UseSwaggerUI();
 app.Run();
 
 // Request records are API contracts, separate from the stored entity.

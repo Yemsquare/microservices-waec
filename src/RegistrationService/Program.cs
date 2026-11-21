@@ -2,8 +2,17 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using RabbitMQ.Client;
+using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Register Swagger services
+builder.Services.AddEndpointsApiExplorer();
+
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "Registration API", Version = "v1" });
+});
 
 // Compose injects these settings so secrets and environment-specific values are not hard-coded in source.
 builder.Services.AddDbContext<RegistrationDbContext>(options =>
@@ -65,6 +74,9 @@ app.MapPost("/api/registrations", async Task<IResult> (CreateRegistrationRequest
         item.ExamSession, item.Subjects, item.CreatedAtUtc), ct);
     return Results.Created($"/api/registrations/{item.Id}", item);
 });
+
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.Run();
 

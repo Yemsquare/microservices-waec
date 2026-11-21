@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
+
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -19,6 +21,8 @@ if (Encoding.UTF8.GetByteCount(signingKey) < 32)
 builder.Services.AddDbContext<AuthDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("Auth")
         ?? throw new InvalidOperationException("ConnectionStrings:Auth is required.")));
+
+;
 
 builder.Services.AddIdentityCore<IdentityUser>(options =>
 {
@@ -56,9 +60,52 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("AdminOnly", policy => policy.RequireClaim("permission", "users.manage"));
 });
 
+// Register Swagger services
+builder.Services.AddEndpointsApiExplorer();
+
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "Auth API", Version = "v1" });
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+        Scheme = "bearaer",
+        BearerFormat = "JWT",
+        In= Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Description = "Paste in your JWT access token to authorize requests. Example: 'Bearer {token}'"
+    });
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
+
 var app = builder.Build();
 app.UseAuthentication();
 app.UseAuthorization();
+// Enable Swagger
+app.UseSwagger();
+
+app.UseSwaggerUI(
+    c=>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Auth API v1");
+        c.RoutePrefix = string.Empty; // Serve Swagger UI at the app's root
+    }
+);
+
+
 
 // Workshop shortcut: create the schema automatically. Production deployments should use EF migrations.
 using (var scope = app.Services.CreateScope())
