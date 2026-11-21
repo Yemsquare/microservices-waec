@@ -14,8 +14,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
 {
     options.TokenValidationParameters = new TokenValidationParameters
     {
-        ValidateIssuer = true, ValidIssuer = jwt["Issuer"],
-        ValidateAudience = true, ValidAudience = jwt["Audience"],
+        ValidateIssuer = true, ValidIssuer = jwt["JWT_ISSUER"],
+        ValidateAudience = true, ValidAudience = jwt["JWT_AUDIENCE"],
         ValidateIssuerSigningKey = true,
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKey)),
         ValidateLifetime = true, ClockSkew = TimeSpan.FromSeconds(30),
@@ -25,10 +25,10 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
 builder.Services.AddAuthorization(options =>
 {
     // Permission policies are more flexible than role checks: a role is just a bundle of claims.
-    options.AddPolicy("CatalogRead", policy => policy.RequireClaim("permission", "catalog.read"));
-    options.AddPolicy("CatalogManage", policy => policy.RequireClaim("permission", "catalog.manage"));
-    options.AddPolicy("RegistrationsRead", policy => policy.RequireClaim("permission", "registrations.read"));
-    options.AddPolicy("RegistrationsCreate", policy => policy.RequireClaim("permission", "registrations.create"));
+    // options.AddPolicy("CatalogRead", policy => policy.RequireClaim("permission", "catalog.read"));
+    // options.AddPolicy("CatalogManage", policy => policy.RequireClaim("permission", "catalog.manage"));
+    // options.AddPolicy("RegistrationsRead", policy => policy.RequireClaim("permission", "registrations.read"));
+    // options.AddPolicy("RegistrationsCreate", policy => policy.RequireClaim("permission", "registrations.create"));
     options.AddPolicy("Authenticated", policy => policy.RequireAuthenticatedUser());
 });
 builder.Services.AddReverseProxy().LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));

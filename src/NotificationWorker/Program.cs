@@ -3,6 +3,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
+using DotNetEnv;
 using RabbitMQ.Client.Events;
 
 var builder = Host.CreateApplicationBuilder(args);
@@ -19,9 +20,9 @@ public sealed class RegistrationNotificationConsumer(
     {
         var factory = new ConnectionFactory
         {
-            HostName = configuration["RabbitMq:Host"] ?? "rabbitmq",
-            UserName = configuration["RabbitMq:User"] ?? "guest",
-            Password = configuration["RabbitMq:Password"] ?? "guest",
+            HostName = Env.GetString("RABBITMQ_DEFAULT_HOST"),
+            UserName = Env.GetString("RABBITMQ_DEFAULT_USER"),
+            Password = Env.GetString("RABBITMQ_DEFAULT_PASSWORD"),
             DispatchConsumersAsync = true,
             AutomaticRecoveryEnabled = true,
             NetworkRecoveryInterval = TimeSpan.FromSeconds(5)
