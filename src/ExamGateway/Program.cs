@@ -109,6 +109,9 @@ builder.Services.AddAuthorization(options =>
 
     options.AddPolicy("RegistrationsCreate",
         policy => policy.RequireClaim("permission", "registrations.create"));
+    
+    options.AddPolicy("StudentsCreate",
+        policy => policy.RequireClaim("permission", "students.create"));
 
     options.AddPolicy("Authenticated",
         policy => policy.RequireAuthenticatedUser());
@@ -162,6 +165,11 @@ app.UseSwaggerUI(options =>
     options.SwaggerEndpoint(
         "/swagger/orders/v1/swagger.json",
         "Orders Service");
+
+    // Student Service
+    options.SwaggerEndpoint(
+        "/swagger/students/v1/swagger.json",
+        "Student Service");
 
     options.RoutePrefix = "swagger";
 });

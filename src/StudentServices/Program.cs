@@ -16,7 +16,14 @@ builder.Services.AddScoped<IStudentRepository, StudentRepository>();
 
 // Register API documenttaion
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c=>
+{
+    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title = "Student Service API",
+        Version = "v1"
+    });
+});
 
 // Register application service 
 builder.Services.AddScoped<IStudentService, StudentService.Services.StudentService>();
@@ -28,8 +35,8 @@ var app = builder.Build();
 
 // Enable swagger in development environment
 
-    app.UseSwagger();
-    app.UseSwaggerUI();
+app.UseSwagger();
+app.UseSwaggerUI();
 
 
 // convert unhandled exceptions to ProblemDetails responses
