@@ -22,7 +22,7 @@ builder.Services.AddDbContext<AuthDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("Auth")
         ?? throw new InvalidOperationException("ConnectionStrings:Auth is required.")));
 
-;
+
 
 builder.Services.AddIdentityCore<IdentityUser>(options =>
 {
@@ -65,16 +65,23 @@ builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo { Title = "Auth API", Version = "v1" });
+    c.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "WAEC Authentication API",
+        Version = "v1",
+        Description = "Authentication, JWT, Identity and RBAC Management API"
+    });
+
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",
-        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
-        Scheme = "bearaer",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
         BearerFormat = "JWT",
-        In= Microsoft.OpenApi.Models.ParameterLocation.Header,
-        Description = "Paste in your JWT access token to authorize requests. Example: 'Bearer {token}'"
+        In = ParameterLocation.Header,
+        Description = "Enter your JWT access token."
     });
+
     c.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
@@ -92,19 +99,20 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 var app = builder.Build();
+app.UseSwagger();
+
+app.UseSwaggerUI(options =>
+{
+    options.SwaggerEndpoint(
+        "/swagger/v1/swagger.json",
+        "WAEC Authentication API V1");
+
+    options.RoutePrefix = "swagger";
+});
+
 app.UseAuthentication();
 app.UseAuthorization();
 // Enable Swagger
-app.UseSwagger();
-
-app.UseSwaggerUI(
-    c=>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Auth API v1");
-        c.RoutePrefix = string.Empty; // Serve Swagger UI at the app's root
-    }
-);
-
 
 
 // Workshop shortcut: create the schema automatically. Production deployments should use EF migrations.

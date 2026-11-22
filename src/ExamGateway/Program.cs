@@ -136,40 +136,29 @@ app.UseSwagger();
 
 app.UseSwaggerUI(options =>
 {
-    // Gateway documentation
     options.SwaggerEndpoint(
         "/swagger/v1/swagger.json",
-        "Exam Gateway API");
+        "WAEC Gateway API");
 
-    // Authentication Service
     options.SwaggerEndpoint(
         "/swagger/auth/v1/swagger.json",
         "Authentication Service");
 
-    // Student Service
     options.SwaggerEndpoint(
-        "/swagger/students/v1/swagger.json",
+        "/swagger/student/v1/swagger.json",
         "Student Management Service");
 
-    // Registration Service
     options.SwaggerEndpoint(
         "/swagger/registration/v1/swagger.json",
         "Registration Service");
 
-    // Catalog Service
     options.SwaggerEndpoint(
         "/swagger/catalog/v1/swagger.json",
         "Examination Catalog Service");
 
-    // Orders Service
     options.SwaggerEndpoint(
         "/swagger/orders/v1/swagger.json",
         "Orders Service");
-
-    // Student Service
-    options.SwaggerEndpoint(
-        "/swagger/students/v1/swagger.json",
-        "Student Service");
 
     options.RoutePrefix = "swagger";
 });

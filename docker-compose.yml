@@ -10,7 +10,7 @@ services:
     volumes:
       - waec-sql-data:/var/opt/mssql
   
-  student:
+  students:
     build:
       context: .
       dockerfile: src/StudentServices/Dockerfile
@@ -18,7 +18,7 @@ services:
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__Students: "Server=sqlserver,1433;Database=WaecStudents;User Id=sa;Password=${SQLSERVER_PASSWORD};TrustServerCertificate=True"
     ports:
-      - "8085:8080"
+      - "8086:8080"
     depends_on:
       sqlserver:
         condition: service_started
@@ -74,7 +74,7 @@ services:
       - "8082:8080"
     depends_on:
       - catalog
-  registration:
+  registrations:
     build:
       context: .
       dockerfile: src/RegistrationService/Dockerfile
@@ -85,7 +85,7 @@ services:
       RabbitMq__User: ${RABBITMQ_DEFAULT_USER}
       RabbitMq__Password: ${RABBITMQ_DEFAULT_PASSWORD}
     ports:
-      - "8083:8080"
+      - "8087:8080"
     depends_on:
       sqlserver:
         condition: service_started
@@ -115,16 +115,16 @@ services:
       ReverseProxy__Clusters__auth__Destinations__destination1__Address: http://auth:8080/
       ReverseProxy__Clusters__catalog__Destinations__destination1__Address: http://catalog:8080/
       ReverseProxy__Clusters__orders__Destinations__destination1__Address: http://orders:8080/
-      ReverseProxy__Clusters__registration__Destinations__destination1__Address: http://registration:8080/
-      ReverseProxy__Clusters__student__Destinations__destination1__Address: http://student:8080/
+      ReverseProxy__Clusters__registrations__Destinations__destination1__Address: http://registrations:8080/
+      ReverseProxy__Clusters__student__Destinations__destination1__Address: http://students:8080/
     ports:
       - "8080:8080"
     depends_on:
       - auth
       - catalog
       - orders
-      - registration
-      - student
+      - registrations
+      - students
 
 volumes:
   waec-sql-data:
